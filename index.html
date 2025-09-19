@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Dashboard de Contratos</title>
 
-  <!-- Tailwind -->
+  <!-- Tailwind (aviso de prod é apenas warning; para projeto real, buildar com PostCSS) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // *** IMPORTANTE: habilita dark via classe no <html> ***
@@ -27,9 +27,8 @@
     })();
   </script>
 
-  <!-- Dependências Externas -->
+  <!-- Dependências Externas (versões fixas) -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- fixe uma versão estável para evitar que "latest" quebre no deploy -->
   <script src="https://unpkg.com/lucide@0.474.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4"></script>
 
@@ -248,10 +247,10 @@
             daysText = 'VENCIDO';
             daysColor = 'text-red-600 dark:text-red-400';
           } else if (daysRemaining <= 30) {
-            daysText = \`${daysRemaining} dia(s)\`;
+            daysText = `${daysRemaining} dia(s)`;
             daysColor = 'text-yellow-600 dark:text-yellow-400';
           } else {
-            daysText = \`${daysRemaining} dia(s)\`;
+            daysText = `${daysRemaining} dia(s)`;
             daysColor = 'text-gray-800 dark:text-gray-200';
           }
 
