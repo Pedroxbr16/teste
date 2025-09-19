@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard de Contratos</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // *** IMPORTANTE: habilita dark via classe no <html> ***
+    tailwind.config = { darkMode: 'class' };
+  </script>
+
+  <!-- Aplica o tema salvo (ou preferência do SO) antes do paint -->
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if ((saved === 'dark') || (!saved && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (_) {}
+    })();
+  </script>
+
+  <!-- Dependências Externas -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Estilos CSS -->
+  <style>
+    body{font-family:'Inter',sans-serif;background-color:#f6f3f3;transition:background-color .3s ease}
+    .dark body{background-color:#111827}
+    ::-webkit-scrollbar{width:8px}
+    ::-webkit-scrollbar-track{background:#f1f1f1}
+    .dark ::-webkit-scrollbar-track{background:#1f2937}
+    ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:10px}
+    .dark ::-webkit-scrollbar-thumb{background:#4b5563}
+    ::-webkit-scrollbar-thumb:hover{background:#9ca3af}
+    .dark ::-webkit-scrollbar-thumb:hover{background:#6b7280}
+    [data-lucide]{width:1em;height:1em}
+    .fade-in{animation:fadeIn .5s ease-in-out}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    #theme-toggle-light-icon{display:none}
+    .dark #theme-toggle-dark-icon{display:none}
+    .dark #theme-toggle-light-icon{display:inline-block}
+  </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8 text-gray-800 dark:bg-gray-900 dark:text-gray-300">
+  <div class="max-w-screen-2xl mx-auto">
+    <!-- Cabeçalho -->
+    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+      <div>
+        <h1 class="text-2xl font-bold dark:text-white">BSM CONTRATOS</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400">Gestão de Equipamentos Industriais</p>
+      </div>
+      <div class="flex items-center gap-4 mt-4 sm:mt-0 w-full sm:w-auto">
+        <div class="relative w-full sm:w-auto">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"></i>
+          <input id="searchInput" placeholder="BUSCAR" class="pl-10 pr-4 py-2 border rounded-lg w-full sm:w-80 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500" aria-label="Caixa de pesquisa de contratos"/>
+        </div>
+        <button id="theme-toggle" type="button" class="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-600" aria-label="Alternar tema">
+          <i data-lucide="moon" class="w-5 h-5" id="theme-toggle-dark-icon"></i>
+          <i data-lucide="sun" class="w-5 h-5" id="theme-toggle-light-icon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- KPIs -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6" aria-label="Resumo dos Contratos">
+      <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-sm border-l-4 border-blue-500 flex justify-between items-center">
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Total de Contratos</p>
+          <p id="totalContratos" class="text-3xl font-bold dark:text-white">0</p>
+        </div>
+        <i data-lucide="file-text" class="w-8 h-8 text-gray-300 dark:text-gray-600"></i>
+      </div>
+      <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-sm border-l-4 border-yellow-500 flex justify-between items-center">
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Contratos Vencendo (30d)</p>
+          <p id="contratosVencendo" class="text-3xl font-bold dark:text-white">0</p>
+        </div>
+        <i data-lucide="alert-triangle" class="w-8 h-8 text-gray-300 dark:text-gray-600"></i>
+      </div>
+      <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-sm border-l-4 border-red-500 flex justify-between items-center">
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Contratos Vencidos</p>
+          <p id="contratosVencidos" class="text-3xl font-bold dark:text-white">0</p>
+        </div>
+        <i data-lucide="file-x" class="w-8 h-8 text-gray-300 dark:text-gray-600"></i>
+      </div>
+      <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow-sm border-l-4 border-green-500 flex justify-between items-center">
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Máquinas Ativas</p>
+          <p id="maquinasAtivas" class="text-3xl font-bold dark:text-white">0/0</p>
+        </div>
+        <i data-lucide="database-zap" class="w-8 h-8 text-gray-300 dark:text-gray-600"></i>
+      </div>
+    </section>
+
+    <!-- Filtros -->
+    <section class="flex flex-col md:flex-row items-center justify-between mb-6 gap-4" aria-label="Filtros e Ações">
+      <div class="w-full md:w-auto mb-4 md:mb-0 text-center md:text-left">
+        <p id="contractCount" class="text-sm text-gray-600 dark:text-gray-400">Mostrando 0 contratos.</p>
+      </div>
+      <div class="flex flex-wrap items-center justify-center md:justify-end gap-2 w-full md:w-auto">
+        <div class="relative w-full sm:w-auto">
+          <i data-lucide="user-check" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+          <select id="filterCoordenador" class="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-9 pr-8 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full" aria-label="Filtrar por coordenador">
+            <option value="">Coordenador</option>
+          </select>
+          <i data-lucide="chevron-down" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+        </div>
+
+        <div class="relative w-full sm:w-auto">
+          <i data-lucide="file-check-2" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+          <select id="filterContratoStatus" class="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-9 pr-8 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full" aria-label="Filtrar por status do contrato">
+            <option value="">Status do contrato</option>
+          </select>
+          <i data-lucide="chevron-down" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+        </div>
+
+        <div class="relative w-full sm:w-auto">
+          <i data-lucide="server-cog" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+          <select id="filterMaquinaStatus" class="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-9 pr-8 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full" aria-label="Filtrar por status da máquina">
+            <option value="">Status da máquina</option>
+          </select>
+          <i data-lucide="chevron-down" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+        </div>
+
+        <div class="relative w-full sm:w-auto">
+          <i data-lucide="map-pin" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+          <select id="filterLocalizacao" class="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg pl-9 pr-8 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500 w-full" aria-label="Filtrar por localização">
+            <option value="">Localização</option>
+          </select>
+          <i data-lucide="chevron-down" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
+        </div>
+
+        <button id="clearFiltersBtn" class="text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1.5 w-full sm:w-auto justify-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>Limpar
+        </button>
+      </div>
+    </section>
+
+    <!-- Conteúdo Principal -->
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div id="contractsGrid" class="lg:col-span-2 grid grid-cols-1 md:grid-cols-1 xl:grid-cols-2 gap-6 self-start">
+        <!-- cards via JS -->
+      </div>
+
+      <!-- Sidebar -->
+      <aside class="lg:col-span-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 border border-gray-200 dark:border-gray-700 h-fit sticky top-6">
+        <div class="mb-8">
+          <h3 class="font-bold text-lg dark:text-white mb-4 text-center">Distribuição de Máquinas</h3>
+          <div class="w-full max-w-sm mx-auto"><canvas id="machineStatusChart"></canvas></div>
+        </div>
+        <hr class="my-6 border-gray-200 dark:border-gray-700">
+        <div>
+          <h3 class="font-bold text-lg dark:text-white mb-4 text-center">Status dos Contratos</h3>
+          <div class="w-full mx-auto"><canvas id="contractStatusChart"></canvas></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // --- DADOS ---
+      const contractsData = [
+        { empresa: "HOLTEC", localizacao: "Rio de Janeiro - RJ", statusContrato: "Renovação Confirmada", dataVencimento: "2025-11-01", coordenador: "MARCELO.SILVEIRA", maquinas: [ { tipo: "Empilhadeira", id: "ED 10-19", status: "Em Funcionamento" }, { tipo: "Empilhadeira", id: "ED 20-02", status: "Em Funcionamento" }, { tipo: "Empilhadeira", id: "ED 20-11", status: "Em Funcionamento" }, { tipo: "Guindaste", id: "100-13", status: "Em Funcionamento" }, { tipo: "Guindaste", id: "75-06L", status: "Em Funcionamento" } ] },
+        { empresa: "BRASFELS", localizacao: "Angra dos Reis - RJ", statusContrato: "Renovação Pendente", dataVencimento: "2025-10-02", coordenador: "MARCELO.SILVEIRA", maquinas: [{ tipo: "Guindaste", id: "165-02", status: "Em Funcionamento" }] },
+        { empresa: "TECHNIP CABIÚNAS", localizacao: "Macaé - RJ", statusContrato: "Renovação Confirmada", dataVencimento: "2025-12-01", coordenador: "MARCELO.SILVEIRA", maquinas: [ { tipo: "Empilhadeira", id: "EG 3,5-04", status: "Em Funcionamento" }, { tipo: "Empilhadeira", id: "ED 2,5-01L", status: "Em Funcionamento" } ] },
+        { empresa: "TECHNIP FLEXBRAS", localizacao: "Rio de Janeiro - RJ", statusContrato: "Sem Provisão", dataVencimento: "2024-08-01", coordenador: "MARCELO.SILVEIRA", maquinas: [{ tipo: "Guindaste", id: "170-02", status: "Em Funcionamento" }] },
+        { empresa: "OCEANPACT", localizacao: "Niterói - RJ", statusContrato: "Renovação Pendente", dataVencimento: "2026-01-15", coordenador: "MARCELO.SILVEIRA", maquinas: [ { tipo: "Empilhadeira", id: "EE 2,5-09", status: "Em Funcionamento" }, { tipo: "Empilhadeira", id: "EG 04-03", status: "Em Funcionamento" }, { tipo: "Empilhadeira", id: "ED 10-08", status: "Em Funcionamento" }, { tipo: "Empilhadeira", id: "ED 16-01", status: "Em Funcionamento" }, { tipo: "Empilhadeira", id: "ED 16-02", status: "Em Funcionamento" }, { tipo: "Empilhadeira", id: "EE 2,5-01", status: "Em Funcionamento" } ] },
+        { empresa: "CSN", localizacao: "Volta Redonda - RJ", statusContrato: "Sem Provisão", dataVencimento: "2025-09-25", coordenador: "MARCELO.SILVEIRA", maquinas: [ { tipo: "Empilhadeira", id: "ED 10-16", status: "Em Funcionamento" }, { tipo: "Guindaste", id: "110-05", status: "Em Funcionamento" }, { tipo: "Guindaste", id: "100-06", status: "Parada" }, { tipo: "Guindaste", id: "110-03", status: "Em Funcionamento" }, { tipo: "Guindaste", id: "115-01", status: "Em Manutenção" }, { tipo: "Guindaste", id: "100-05", status: "Aguardando OS" } ] },
+        { empresa: "BÚZIOS 6", localizacao: "Campos dos Goytacazes - RJ", statusContrato: "Renovação Confirmada", dataVencimento: "2026-03-15", coordenador: "MARCELO.SILVEIRA", maquinas: [{ tipo: "Guindaste", id: "220-02", status: "Em Funcionamento" }] }
+      ];
+
+      // --- DOM ---
+      const dom = {
+        searchInput: document.getElementById('searchInput'),
+        contractsGrid: document.getElementById('contractsGrid'),
+        totalContratos: document.getElementById('totalContratos'),
+        contratosVencendo: document.getElementById('contratosVencendo'),
+        contratosVencidos: document.getElementById('contratosVencidos'),
+        maquinasAtivas: document.getElementById('maquinasAtivas'),
+        contractCount: document.getElementById('contractCount'),
+        clearFiltersBtn: document.getElementById('clearFiltersBtn'),
+        filterCoordenador: document.getElementById('filterCoordenador'),
+        filterContratoStatus: document.getElementById('filterContratoStatus'),
+        filterMaquinaStatus: document.getElementById('filterMaquinaStatus'),
+        filterLocalizacao: document.getElementById('filterLocalizacao'),
+        machineChartCanvas: document.getElementById('machineStatusChart'),
+        contractChartCanvas: document.getElementById('contractStatusChart'),
+        themeToggle: document.getElementById('theme-toggle')
+      };
+      const allFilterSelects = [dom.filterCoordenador, dom.filterContratoStatus, dom.filterMaquinaStatus, dom.filterLocalizacao];
+
+      let machineStatusChart = null;
+      let contractStatusChart = null;
+      let currentFilteredData = [];
+
+      // --- CONFIG ---
+      const config = {
+        statusContrato: {
+          'Renovação Confirmada': { bg: 'bg-green-100 dark:bg-green-900/50', text: 'text-green-800 dark:text-green-300', color: '#10B981' },
+          'Renovação Pendente':   { bg: 'bg-yellow-100 dark:bg-yellow-900/50', text: 'text-yellow-800 dark:text-yellow-300', color: '#F59E0B' },
+          'Sem Provisão':         { bg: 'bg-gray-200 dark:bg-gray-700/50', text: 'text-gray-700 dark:text-gray-300', color: '#6B7280' }
+        },
+        statusMaquina: {
+          'Em Funcionamento': { bg: 'bg-green-100 dark:bg-green-900/50', text: 'text-green-800 dark:text-green-300', color: '#10B981' },
+          'Parada':            { bg: 'bg-red-100 dark:bg-red-900/50', text: 'text-red-800 dark:text-red-300', color: '#EF4444' },
+          'Aguardando OS':     { bg: 'bg-yellow-100 dark:bg-yellow-900/50', text: 'text-yellow-800 dark:text-yellow-300', color: '#F59E0B' },
+          'Em Manutenção':     { bg: 'bg-blue-100 dark:bg-blue-900/50', text: 'text-blue-800 dark:text-blue-300', color: '#3B82F6' }
+        },
+        iconesMaquina: { 'Empilhadeira': 'hard-hat', 'Guindaste': 'truck' }
+      };
+
+      // --- Helpers ---
+      const calculateDaysRemaining = (endDateString) => {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const endDate = new Date(endDateString); endDate.setHours(0,0,0,0);
+        return Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+      };
+      const getChartTextColor = () => document.documentElement.classList.contains('dark') ? '#E5E7EB' : '#6B7280';
+
+      // --- Render contracts ---
+      const renderContracts = (contractsToRender) => {
+        dom.contractsGrid.innerHTML = '';
+        if (contractsToRender.length === 0) {
+          dom.contractsGrid.innerHTML = `
+            <p class="text-gray-500 dark:text-gray-400 col-span-full text-center">Nenhum contrato encontrado.</p>
+          `;
+          lucide.createIcons();
+          return;
+        }
+
+        contractsToRender.forEach(contract => {
+          const daysRemaining = calculateDaysRemaining(contract.dataVencimento);
+          let daysText, daysColor;
+          if (daysRemaining < 0) {
+            daysText = 'VENCIDO';
+            daysColor = 'text-red-600 dark:text-red-400';
+          } else if (daysRemaining <= 30) {
+            daysText = ${daysRemaining} dia(s);
+            daysColor = 'text-yellow-600 dark:text-yellow-400';
+          } else {
+            daysText = ${daysRemaining} dia(s);
+            daysColor = 'text-gray-800 dark:text-gray-200';
+          }
+
+          const contractStatusClasses = config.statusContrato[contract.statusContrato] || {bg:'bg-gray-200',text:'text-gray-700'};
+
+          const maquinasHtml = contract.maquinas.map(maquina => {
+            const mCfg = config.statusMaquina[maquina.status] || {bg:'bg-gray-200',text:'text-gray-700'};
+            const icon  = config.iconesMaquina[maquina.tipo] || 'settings';
+            return `
+              <li class="flex justify-between items-center">
+                <span class="flex items-center text-gray-600 dark:text-gray-300">
+                  <i data-lucide="${icon}" class="w-4 h-4 mr-2 text-gray-400 dark:text-gray-500"></i>
+                  ${maquina.tipo} <span class="text-gray-400 ml-1">(${maquina.id})</span>
+                </span>
+                <span class="text-xs font-medium ${mCfg.bg} ${mCfg.text} px-2 py-0.5 rounded-md">${maquina.status}</span>
+              </li>
+            `;
+          }).join('');
+
+          const card = document.createElement('div');
+          card.className = bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 border border-gray-200 dark:border-gray-700 fade-in ${daysRemaining < 0 ? 'opacity-75' : ''};
+          card.innerHTML = `
+            <div class="flex justify-between items-start mb-3">
+              <div>
+                <h2 class="font-bold text-lg dark:text-white">${contract.empresa}</h2>
+                <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                  <i data-lucide="map-pin" class="w-3 h-3 mr-1"></i> ${contract.localizacao}
+                </p>
+              </div>
+              <span class="text-xs font-semibold ${contractStatusClasses.bg} ${contractStatusClasses.text} px-2.5 py-1 rounded-full">${contract.statusContrato}</span>
+            </div>
+
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              <span>Dias restantes: <span class="font-bold ${daysColor}">${daysText}</span></span>
+            </div>
+
+            <div>
+              <h3 class="font-semibold text-sm mb-2 text-gray-700 dark:text-gray-300">Máquinas (${contract.maquinas.length})</h3>
+              <ul class="space-y-2 text-sm">${maquinasHtml}</ul>
+            </div>
+          `;
+          dom.contractsGrid.appendChild(card);
+        });
+
+        lucide.createIcons();
+      };
+
+      // --- Charts ---
+      const renderCharts = (contractsForChart) => {
+        const machineStatusCounts = Object.fromEntries(Object.keys(config.statusMaquina).map(s => [s, 0]));
+        contractsForChart.forEach(c => c.maquinas.forEach(m => { if (machineStatusCounts.hasOwnProperty(m.status)) machineStatusCounts[m.status]++; }));
+
+        if (machineStatusChart) machineStatusChart.destroy();
+        const machineCtx = dom.machineChartCanvas.getContext('2d');
+        machineStatusChart = new Chart(machineCtx, {
+          type: 'doughnut',
+          data: {
+            labels: Object.keys(machineStatusCounts),
+            datasets: [{
+              data: Object.values(machineStatusCounts),
+              backgroundColor: Object.values(config.statusMaquina).map(s => s.color),
+              borderColor: document.documentElement.classList.contains('dark') ? '#111827' : '#ffffff',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 20, font: { size: 12 }, color: getChartTextColor() } } },
+            cutout: '70%',
+            onHover: (evt, elements, chart) => { chart.canvas.style.cursor = elements[0] ? 'pointer' : 'default'; },
+            onClick: (e, el) => { if (el.length > 0) { dom.filterMaquinaStatus.value = machineStatusChart.data.labels[el[0].index]; applyFiltersAndSearch(); } }
+          }
+        });
+
+        const contractStatusCounts = Object.fromEntries(Object.keys(config.statusContrato).map(s => [s, 0]));
+        contractsForChart.forEach(c => { if (contractStatusCounts.hasOwnProperty(c.statusContrato)) contractStatusCounts[c.statusContrato]++; });
+
+        if (contractStatusChart) contractStatusChart.destroy();
+        const contractCtx = dom.contractChartCanvas.getContext('2d');
+        contractStatusChart = new Chart(contractCtx, {
+          type: 'bar',
+          data: {
+            labels: Object.keys(contractStatusCounts),
+            datasets: [{ data: Object.values(contractStatusCounts), backgroundColor: Object.values(config.statusContrato).map(s => s.color) }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { beginAtZero: true, ticks: { stepSize: 1, precision: 0, color: getChartTextColor() }, grid: { color: getChartTextColor() + '33' } },
+              y: { ticks: { color: getChartTextColor() }, grid: { color: getChartTextColor() + '33' } }
+            },
+            onHover: (evt, elements, chart) => { chart.canvas.style.cursor = elements[0] ? 'pointer' : 'default'; },
+            onClick: (e, el) => { if (el.length > 0) { dom.filterContratoStatus.value = contractStatusChart.data.labels[el[0].index]; applyFiltersAndSearch(); } }
+          }
+        });
+      };
+
+      // --- KPIs ---
+      const updateSummaryCards = () => {
+        let vencendo = 0, vencidos = 0, ativas = 0, totalMaquinas = 0;
+        contractsData.forEach(c => {
+          const d = calculateDaysRemaining(c.dataVencimento);
+          if (d < 0) vencidos++;
+          else if (d <= 30) vencendo++;
+          totalMaquinas += c.maquinas.length;
+          ativas += c.maquinas.filter(m => m.status === 'Em Funcionamento').length;
+        });
+        dom.totalContratos.textContent = contractsData.length;
+        dom.contratosVencendo.textContent = vencendo;
+        dom.contratosVencidos.textContent = vencidos;
+        dom.maquinasAtivas.textContent = ${ativas}/${totalMaquinas};
+      };
+
+      // --- Filtros ---
+      const populateFilters = () => {
+        const getUnique = (key, isMachine = false) =>
+          isMachine ? [...new Set(contractsData.flatMap(c => c.maquinas.map(m => m[key])))]
+                    : [...new Set(contractsData.map(c => c[key]))];
+
+        populateSelect(dom.filterCoordenador, [...new Set(["KEITSON.MARTINS", "GAIO.AMARAL", ...getUnique('coordenador')])]);
+        populateSelect(dom.filterContratoStatus, getUnique('statusContrato'));
+        populateSelect(dom.filterMaquinaStatus, getUnique('status', true));
+        populateSelect(dom.filterLocalizacao, getUnique('localizacao'));
+      };
+      const populateSelect = (selectEl, options) => {
+        options.sort().forEach(option => { selectEl.add(new Option(option, option)); });
+      };
+
+      const applyFiltersAndSearch = () => {
+        const s  = dom.searchInput.value.toLowerCase();
+        const c  = dom.filterCoordenador.value;
+        const st = dom.filterContratoStatus.value;
+        const sm = dom.filterMaquinaStatus.value;
+        const l  = dom.filterLocalizacao.value;
+
+        const filtered = contractsData.filter(ct =>
+          (c  === '' || ct.coordenador === c) &&
+          (st === '' || ct.statusContrato === st) &&
+          (l  === '' || ct.localizacao === l) &&
+          (sm === '' || ct.maquinas.some(m => m.status === sm)) &&
+          (s  === '' || ct.empresa.toLowerCase().includes(s)
+                    || ct.localizacao.toLowerCase().includes(s)
+                    || ct.coordenador.toLowerCase().includes(s)
+                    || ct.maquinas.some(m => m.tipo.toLowerCase().includes(s) || m.id.toLowerCase().includes(s)))
+        );
+
+        currentFilteredData = filtered;
+        renderContracts(filtered);
+        renderCharts(filtered);
+        dom.contractCount.textContent = Mostrando ${filtered.length} contrato(s).;
+      };
+
+      const clearAllFilters = () => {
+        dom.searchInput.value = '';
+        allFilterSelects.forEach(f => f.selectedIndex = 0);
+        applyFiltersAndSearch();
+      };
+
+      // --- Tema ---
+      const applyTheme = (theme) => {
+        if (theme === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+        if (machineStatusChart && contractStatusChart) renderCharts(currentFilteredData);
+      };
+      const toggleTheme = () => {
+        const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+        localStorage.setItem('theme', newTheme);
+        applyTheme(newTheme);
+      };
+      const initializeTheme = () => {
+        // Já aplicamos cedo no <head>; aqui só garantimos gráficos corretos
+        const saved = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = saved || (prefersDark ? 'dark' : 'light');
+        applyTheme(theme);
+      };
+
+      // --- Init ---
+      const init = () => {
+        lucide.createIcons();
+        initializeTheme();
+        dom.searchInput.addEventListener('input', applyFiltersAndSearch);
+        allFilterSelects.forEach(f => f.addEventListener('change', applyFiltersAndSearch));
+        dom.clearFiltersBtn.addEventListener('click', clearAllFilters);
+        dom.themeToggle.addEventListener('click', toggleTheme);
+        populateFilters();
+        updateSummaryCards();
+        applyFiltersAndSearch();
+      };
+      init();
+    });
+  </script>
+</body>
+</html>
