@@ -29,8 +29,9 @@
 
   <!-- Dependências Externas -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- fixe uma versão estável para evitar que "latest" quebre no deploy -->
+  <script src="https://unpkg.com/lucide@0.474.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4"></script>
 
   <!-- Estilos CSS -->
   <style>
@@ -247,10 +248,10 @@
             daysText = 'VENCIDO';
             daysColor = 'text-red-600 dark:text-red-400';
           } else if (daysRemaining <= 30) {
-            daysText = ${daysRemaining} dia(s);
+            daysText = \`${daysRemaining} dia(s)\`;
             daysColor = 'text-yellow-600 dark:text-yellow-400';
           } else {
-            daysText = ${daysRemaining} dia(s);
+            daysText = \`${daysRemaining} dia(s)\`;
             daysColor = 'text-gray-800 dark:text-gray-200';
           }
 
@@ -271,7 +272,7 @@
           }).join('');
 
           const card = document.createElement('div');
-          card.className = bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 border border-gray-200 dark:border-gray-700 fade-in ${daysRemaining < 0 ? 'opacity-75' : ''};
+          card.className = `bg-white dark:bg-gray-800 rounded-lg shadow-sm p-5 border border-gray-200 dark:border-gray-700 fade-in ${daysRemaining < 0 ? 'opacity-75' : ''}`;
           card.innerHTML = `
             <div class="flex justify-between items-start mb-3">
               <div>
@@ -300,6 +301,8 @@
 
       // --- Charts ---
       const renderCharts = (contractsForChart) => {
+        if (!dom.machineChartCanvas || !dom.contractChartCanvas) return;
+
         const machineStatusCounts = Object.fromEntries(Object.keys(config.statusMaquina).map(s => [s, 0]));
         contractsForChart.forEach(c => c.maquinas.forEach(m => { if (machineStatusCounts.hasOwnProperty(m.status)) machineStatusCounts[m.status]++; }));
 
@@ -363,7 +366,7 @@
         dom.totalContratos.textContent = contractsData.length;
         dom.contratosVencendo.textContent = vencendo;
         dom.contratosVencidos.textContent = vencidos;
-        dom.maquinasAtivas.textContent = ${ativas}/${totalMaquinas};
+        dom.maquinasAtivas.textContent = `${ativas}/${totalMaquinas}`;
       };
 
       // --- Filtros ---
@@ -402,7 +405,7 @@
         currentFilteredData = filtered;
         renderContracts(filtered);
         renderCharts(filtered);
-        dom.contractCount.textContent = Mostrando ${filtered.length} contrato(s).;
+        dom.contractCount.textContent = `Mostrando ${filtered.length} contrato(s).`;
       };
 
       const clearAllFilters = () => {
@@ -423,7 +426,6 @@
         applyTheme(newTheme);
       };
       const initializeTheme = () => {
-        // Já aplicamos cedo no <head>; aqui só garantimos gráficos corretos
         const saved = localStorage.getItem('theme');
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const theme = saved || (prefersDark ? 'dark' : 'light');
